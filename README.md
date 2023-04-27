@@ -1,70 +1,96 @@
-# Getting Started with Create React App
+# How to deploy a react app with Google cloud
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This React app has been created as a guide and reference for deploying a React app with GCP
 
-## Available Scripts
+## Technology 
+- React
+- Docker*
+- Nginx
+- Google Cloud Provider
 
-In the project directory, you can run:
+*Install [Docker Desktop]('https://www.docker.com/products/docker-desktop/') on your machine
 
-### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Setup Docker files
+Create the following files:
+- .dockerignore - ignore files such as node modules etc.
+- Dockerfile - multi stage build
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
 
-### `npm test`
+### .dockerignore
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```
+node_modules
+npm-debug.log
+```
 
-### `npm run build`
+### Dockerfile
+```Docker
+# Stage 0 - Build frontend Assets
+FROM node: 12.16.3-alipne as build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+# Stage 1 - Serve frontend Assets
+FROM fholzer/nginx-brotli:v1.12.2
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+WORKDIR /etc/nginx
+ADD nginx.conf /etc/nginx/nginx.conf
 
-### `npm run eject`
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 443
+CMD ["nginx", "-g", "daemon off;"]
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Setup niginx file
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Create the following file:
+- niginx.conf
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Build and run
 
-## Learn More
+### Build Docker image
+```
+docker build -t react-docker-gcp:latest .
+```
+### Run Docker image
+```
+docker run -p 8080:443 react-docker-gcp:latest
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Head to your broswer and type the followig url: [http://localhost:8080]('http://localhost:8080/'). Your app should now be running.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Setting up GCP
+go to [cloud.google.com](cloud.google.com) and navigate to your console.
+- Create a new project - fill in name input
+- Once project is created, you should now see project info the dashboard
+- At the top of the page search Cloud Run
+- Click create service
+- Select 2nd option, 'Continuously deploy new revisions from a source repository', followed by 'Set up with cloud build'
+- Select Github in Repository Provider dropdown
+- Select repository
+- Fill in service name
+- Select region accordingly
 
-### Code Splitting
+Build configuration
+- Select main in Branch dropdown
+- Select Dockerfile for the build type
+- Type /Dockerfile in source location
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+Advanced options
+- Type 443 in Container port field
 
-### Analyzing the Bundle Size
+Authentication
+- select 'Allow unauthorised invocations'
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
 
-### Making a Progressive Web App
+Finally click create
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## References
 
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+[Cloud Guru](https://www.youtube.com/watch?v=7BAwiZhuREg&list=PLghwmWptCabcpLX5pPxbLu_ym5uMI23AV&index=2&t=371s)
